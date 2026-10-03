@@ -1,0 +1,11 @@
+# Python packages for the photo booth.
+# ./deploy.sh installs these on the Pi automatically whenever this file changes.
+
+# --- Web server and camera ----------------------------------------------------
+flask>=3.0,<4                   # the web server that the iPad talks to
+opencv-python-headless>=4.9     # reads the USB webcam ("headless" = no desktop GUI bits)
+numpy>=1.26                     # image arrays (OpenCV uses these)
+python-dotenv>=1.0              # loads settings from the .env file
+
+# --- Photos and strips ------------------------------------------------------------
+Pillow>=10.1                    # filters, overlays, strip and print layout

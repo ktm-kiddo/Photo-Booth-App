@@ -1,0 +1,13 @@
+# Settings, including the Gmail app password: never share this
+.env
+
+# Python virtual environment and caches
+venv/
+__pycache__/
+*.pyc
+
+# Photos, strips and email queue
+data/
+
+# macOS clutter
+.DS_Store

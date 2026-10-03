@@ -1,0 +1,40 @@
+# =============================================================================
+#  systemd service: starts the photo booth when the Pi powers on, and
+#  restarts it automatically if it ever stops or crashes.
+#
+#  You don't need to install this by hand: deploy/pi_setup.sh fills in
+#  __USER__ and __APP_DIR__ and copies it to /etc/systemd/system/.
+#
+#  Useful commands on the Pi:
+#      sudo systemctl status photobooth      is it running?
+#      sudo systemctl restart photobooth     restart it
+#      sudo systemctl stop photobooth        stop it (e.g. to run app.py by hand)
+#      journalctl -u photobooth -f           watch the live log (Ctrl+C to quit)
+# =============================================================================
+
+[Unit]
+Description=Photo booth web app
+# Start once basic networking is up. The app doesn't wait for Wi-Fi: the iPad
+# can connect whenever the network comes up.
+After=network.target
+# Never give up restarting, however many times it fails in a row.
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=__USER__
+WorkingDirectory=__APP_DIR__
+ExecStart=__APP_DIR__/venv/bin/python __APP_DIR__/app.py
+# Print log lines immediately instead of buffering them.
+Environment=PYTHONUNBUFFERED=1
+
+# If the app exits for any reason, start it again after 3 seconds.
+Restart=always
+RestartSec=3
+
+# Give the app 10 seconds to shut down cleanly before it's force-stopped.
+TimeoutStopSec=10
+
+[Install]
+# Start at boot as part of normal multi-user startup.
+WantedBy=multi-user.target

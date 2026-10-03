@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#15111d">
+  <title>Photo Booth Admin</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='admin/admin.css') }}">
+</head>
+<body data-booth-port="{{ booth_port }}">
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name">Photo Booth <b>Admin</b></span>
+    </div>
+    <nav class="nav" id="nav">
+      <button data-tab="dashboard" class="is-active">Dashboard</button>
+      <button data-tab="gallery">Gallery</button>
+      <button data-tab="emails">Emails</button>
+      <button data-tab="settings">Settings</button>
+      <button data-tab="frames">Frames</button>
+      <button data-tab="designs">Strip designs</button>
+      <button data-tab="system">System</button>
+    </nav>
+    <a class="open-booth" id="open-booth" target="_blank" rel="noopener">Open booth ↗</a>
+  </header>
+
+  <main class="main">
+
+    <!-- ===================== Dashboard ===================== -->
+    <section id="tab-dashboard" class="tab-page">
+      <div class="page-head">
+        <h1 id="dash-title">Dashboard</h1>
+        <p class="muted" id="dash-sub"></p>
+      </div>
+      <div class="stats" id="dash-stats"></div>
+      <div class="cards cards-2">
+        <div class="card">
+          <h2>Camera</h2>
+          <div class="snapshot"><img id="dash-snapshot" alt="Camera view"><p id="dash-snapshot-msg" class="muted"></p></div>
+          <dl class="facts" id="dash-camera"></dl>
+        </div>
+        <div class="card">
+          <h2>Booth</h2>
+          <dl class="facts" id="dash-booth"></dl>
+          <h2 class="mt">Raspberry Pi</h2>
+          <dl class="facts" id="dash-pi"></dl>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== Gallery ===================== -->
+    <section id="tab-gallery" class="tab-page" hidden>
+      <div class="page-head">
+        <div>
+          <h1>Gallery</h1>
+          <p class="muted" id="gallery-sub"></p>
+        </div>
+        <div class="head-actions">
+          <a class="btn" href="/api/gallery/download.zip">Download strips (ZIP)</a>
+          <a class="btn" href="/api/gallery/download.zip?all=1">Download everything (ZIP)</a>
+        </div>
+      </div>
+      <div class="gallery" id="gallery-grid"></div>
+      <div class="center"><button class="btn" id="gallery-more" hidden>Load more</button></div>
+    </section>
+
+    <!-- ===================== Emails ===================== -->
+    <section id="tab-emails" class="tab-page" hidden>
+      <div class="page-head">
+        <div>
+          <h1>Emails</h1>
+          <p class="muted" id="emails-sub"></p>
+        </div>
+        <div class="head-actions"><button class="btn" id="emails-retry">Retry waiting emails now</button></div>
+      </div>
+      <div class="card"><h2>Waiting to send</h2><div id="emails-waiting"></div></div>
+      <div class="card"><h2>Failed</h2><div id="emails-failed"></div></div>
+      <div class="card"><h2>Sent</h2><div id="emails-sent"></div></div>
+    </section>
+
+    <!-- ===================== Settings ===================== -->
+    <section id="tab-settings" class="tab-page" hidden>
+      <div class="page-head">
+        <div>
+          <h1>Settings</h1>
+          <p class="muted">Saving restarts the booth (about 5 seconds). The iPad reloads by itself.</p>
+        </div>
+        <div class="head-actions"><button class="btn btn-primary" id="settings-save">Save &amp; restart</button></div>
+      </div>
+      <form id="settings-form" class="settings" autocomplete="off"></form>
+
+      <div class="card" id="email-design-card">
+        <h2>Email design preview</h2>
+        <p class="muted">Pick a design in the Email section above, then save. The preview uses your latest strip.</p>
+        <div class="design-picker" id="design-picker"></div>
+        <iframe class="email-frame" id="email-frame" title="Email preview"></iframe>
+        <form class="inline-form" id="test-email-form">
+          <input type="email" id="test-email" placeholder="you@example.com" required>
+          <button class="btn" type="submit">Send a test email</button>
+        </form>
+        <p class="muted small">The test uses the <b>saved</b> settings, so save first if you've changed something.</p>
+      </div>
+    </section>
+
+    <!-- ===================== Frames ===================== -->
+    <section id="tab-frames" class="tab-page" hidden>
+      <div class="page-head">
+        <div>
+          <h1>Frames</h1>
+          <p class="muted">Transparent PNGs laid over each photo (best size 1080 × 960 px). Guests see them in this order,
+            and start with the first one. “No frame” can be moved or hidden like the others.</p>
+        </div>
+        <form class="head-actions" id="frame-upload">
+          <button class="btn" type="button" id="frame-ai">Make one with AI</button>
+          <label class="btn btn-primary">Upload a frame…<input type="file" id="frame-file" accept="image/png" hidden></label>
+        </form>
+      </div>
+      <div class="list" id="frames-list"></div>
+    </section>
+
+    <!-- ===================== Strip designs ===================== -->
+    <section id="tab-designs" class="tab-page" hidden>
+      <div class="page-head">
+        <div>
+          <h1>Strip designs</h1>
+          <p class="muted">Guests pick one on the review screen, in this order. The starting design is set in Settings → Event.</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn" id="design-ai">Make one with AI</button>
+          <button class="btn btn-primary" id="design-new">New design</button>
+        </div>
+      </div>
+      <div class="designs" id="designs-grid"></div>
+    </section>
+
+    <!-- ===================== System ===================== -->
+    <section id="tab-system" class="tab-page" hidden>
+      <div class="page-head"><h1>System</h1></div>
+      <div class="cards cards-2">
+        <div class="card">
+          <h2>Raspberry Pi</h2>
+          <dl class="facts" id="system-pi"></dl>
+          <div class="button-row">
+            <button class="btn" data-system="restart">Restart booth</button>
+            <button class="btn" data-system="reboot">Reboot Pi</button>
+            <button class="btn btn-danger" data-system="shutdown">Shut down Pi</button>
+          </div>
+          <p class="muted small">Always shut down before unplugging the Pi; pulling the power can damage the SD card.</p>
+        </div>
+        <div class="card">
+          <h2>Printer</h2>
+          <pre class="pre" id="system-printers"></pre>
+          <div class="button-row"><button class="btn" id="printer-test">Print the latest strip</button></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Health history</h2>
+        <p class="muted small">Recorded every 30 seconds and kept across restarts. If the Pi switched itself off,
+          the lines just before a “booth started” line show what was happening: temperature, power warnings, memory.</p>
+        <pre class="pre log" id="system-health"></pre>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h2>Log</h2>
+          <label class="check"><input type="checkbox" id="logs-follow" checked> Live</label>
+        </div>
+        <pre class="pre log" id="system-logs"></pre>
+      </div>
+    </section>
+  </main>
+
+  <!-- Strip detail -->
+  <div class="modal" id="strip-modal" hidden>
+    <div class="modal-card">
+      <button class="modal-close" id="strip-close" aria-label="Close">×</button>
+      <div class="strip-detail">
+        <img id="strip-big" alt="">
+        <div class="strip-info">
+          <h2 id="strip-title"></h2>
+          <div class="photo-row" id="strip-photos"></div>
+          <div class="button-col">
+            <a class="btn" id="strip-download">Download strip</a>
+            <form class="inline-form" id="strip-email-form">
+              <input type="email" id="strip-email" placeholder="Email it to…" required>
+              <button class="btn" type="submit">Send</button>
+            </form>
+            <button class="btn" id="strip-print">Print</button>
+            <button class="btn btn-danger" id="strip-delete">Delete</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Strip design editor -->
+  <div class="modal" id="design-modal" hidden>
+    <div class="modal-card modal-wide">
+      <button class="modal-close" id="design-close" aria-label="Close">×</button>
+      <h2 id="design-modal-title">Edit design</h2>
+      <div class="design-editor">
+        <div class="design-preview"><img id="design-preview" alt="Preview"></div>
+        <form class="design-form" id="design-form" autocomplete="off"></form>
+      </div>
+      <div class="button-row right">
+        <button class="btn" id="design-cancel" type="button">Cancel</button>
+        <button class="btn btn-primary" id="design-save" type="button">Save design</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Make a frame or design with an AI model -->
+  <div class="modal" id="ai-modal" hidden>
+    <div class="modal-card modal-wide">
+      <button class="modal-close" id="ai-close" aria-label="Close">×</button>
+      <h2 id="ai-title">Make one with AI</h2>
+      <p class="muted ai-intro">Works with any AI chat: Claude, ChatGPT, Gemini… Use a new chat each time.</p>
+      <div class="ai-steps">
+        <div class="ai-step">
+          <h3><span class="step-number">1</span> Describe it and copy the prompt</h3>
+          <textarea id="ai-describe" maxlength="500"></textarea>
+          <div class="button-row">
+            <button class="btn btn-primary" id="ai-copy" type="button">Copy prompt</button>
+          </div>
+          <details class="ai-details">
+            <summary>See the prompt</summary>
+            <textarea id="ai-prompt" class="pre" readonly></textarea>
+          </details>
+          <p class="muted small">Paste it into the AI chat and send it.</p>
+        </div>
+        <div class="ai-step">
+          <h3><span class="step-number">2</span> Paste the AI's reply</h3>
+          <textarea id="ai-reply" placeholder="Paste the AI's whole answer here"></textarea>
+          <div id="ai-frame-only">
+            <div class="ai-frame-row">
+              <div class="frame-preview ai-frame-preview"><img id="ai-frame-preview" alt="Preview" hidden></div>
+              <div class="ai-frame-side">
+                <label for="ai-frame-name">Name on the button</label>
+                <input type="text" id="ai-frame-name" maxlength="24" placeholder="e.g. Gold Corners">
+              </div>
+            </div>
+          </div>
+          <p class="ai-message" id="ai-message"></p>
+          <div class="button-row">
+            <button class="btn btn-primary" id="ai-import" type="button" disabled>Add frame</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <script src="{{ url_for('static', filename='admin/admin.js') }}"></script>
+</body>
+</html>

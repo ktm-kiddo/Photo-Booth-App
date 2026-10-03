@@ -1,0 +1,1110 @@
+/* =============================================================================
+   Photo booth styles
+   Designed for an iPad in landscape, running full screen in Safari.
+
+   The look: a real booth. Black, white and one booth-red used only for the
+   shutter button. The iPad's own system font for everything you read, and a
+   bold condensed font (Bebas Neue) for the big signage moments: the title,
+   the countdown and "Touch to start". Flat surfaces, thin lines, no glows.
+
+   Contents
+     1. Fonts, colours and sizes
+     2. Kiosk basics (no zoom, no text selection, no scrolling)
+     3. Shared pieces: buttons, pickers, tiles, spinner
+     4. Start screen (full-screen camera) and live screen (viewfinder + rail)
+     5. Countdown, flash, developing
+     6. Review screen: strip, actions, customize editor
+     7. Email sheet, toast, notice, rotate hint
+   ============================================================================= */
+
+/* --- 1. Fonts, colours and sizes ------------------------------------------- */
+/* All fonts are served by the Pi (static/fonts), so they work offline.
+   The script and serif fonts are only used for the strip-design buttons. */
+@font-face { font-family: "Bebas Neue"; src: url("../fonts/BebasNeue-Regular.ttf") format("truetype"); font-display: block; }
+@font-face { font-family: "Pacifico"; src: url("../fonts/Pacifico-Regular.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Playfair Display"; src: url("../fonts/PlayfairDisplay.ttf") format("truetype"); font-weight: 400 900; font-display: swap; }
+@font-face { font-family: "Special Elite"; src: url("../fonts/SpecialElite-Regular.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Caveat"; src: url("../fonts/Caveat.ttf") format("truetype"); font-weight: 400 700; font-display: swap; }
+
+:root {
+  --bg: #0b0b0c;
+  --surface: #161618;          /* sheets, list rows */
+  --surface-2: #202023;        /* buttons, tiles */
+  --surface-3: #2c2c30;        /* pressed */
+  --line: rgba(255, 255, 255, 0.1);
+  --text: #f4f4f2;
+  --muted: #8d8d92;
+  --red: #d8342c;              /* the shutter button, and nothing else */
+  --good: #3fbf6f;
+  --bad: #ff6b6b;
+  --pad: 24px;
+  --radius: 10px;
+  --rail-w: clamp(330px, 32vw, 430px);
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  --display: "Bebas Neue", "Helvetica Neue Condensed", "Arial Narrow", sans-serif;
+  --screen-h: 100vh;           /* visible screen height */
+}
+
+@supports (height: 100dvh) {
+  :root { --screen-h: 100dvh; }   /* ignores Safari's toolbars where supported */
+}
+
+/* --- 2. Kiosk basics ------------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; }
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  color: var(--text);
+  background: var(--bg);
+  font-family: var(--font);
+  font-size: 17px;
+  -webkit-font-smoothing: antialiased;
+
+  /* No text selection or "copy / look up" pop-ups. */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+
+  /* No grey tap flash, no double-tap zoom, no rubber-band bounce. */
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+}
+
+body { position: fixed; inset: 0; }        /* stop iOS dragging the page around */
+img { -webkit-user-drag: none; pointer-events: none; }
+input { -webkit-user-select: text; user-select: text; }   /* typing is allowed here */
+button { font: inherit; color: inherit; cursor: pointer; }
+[hidden] { display: none !important; }
+
+.screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  padding: max(var(--pad), env(safe-area-inset-top))
+           max(var(--pad), env(safe-area-inset-right))
+           max(var(--pad), env(safe-area-inset-bottom))
+           max(var(--pad), env(safe-area-inset-left));
+  gap: var(--pad);
+}
+
+.icon {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* --- 3. Shared pieces ------------------------------------------------------ */
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 64px;
+  padding: 0 26px;
+  border: 0;
+  border-radius: var(--radius);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  background: var(--surface-2);
+  overflow: hidden;
+  transition: background 0.15s ease, opacity 0.2s ease;
+}
+
+.btn:active { background: var(--surface-3); }
+.btn:disabled { opacity: 0.4; pointer-events: none; }
+
+/* The main action on a screen: white, like a printed label. */
+.btn-primary { color: #0b0b0c; background: var(--text); }
+.btn-primary:active { background: #d9d9d6; }
+
+.btn-ghost { background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
+.btn-small { min-height: 50px; padding: 0 20px; font-size: 16px; }
+
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.picker-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Text tabs with an underline (customize editor). */
+.tabs {
+  display: flex;
+  gap: 28px;
+  border-bottom: 1px solid var(--line);
+}
+
+.tab {
+  position: relative;
+  min-height: 48px;
+  padding: 0;
+  border: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--muted);
+  background: none;
+}
+
+.tab.is-active { color: var(--text); }
+
+.tab.is-active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--text);
+}
+
+/* Filter and frame grids. minmax(0, 1fr) keeps every tile the same size,
+   however long its name is. */
+.filter-grid,
+.frame-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px 8px;
+}
+
+.tile { flex: 0 0 80px; }
+
+.tile {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  color: var(--muted);
+  background: none;
+}
+
+.tile-image {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 9 / 8;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--surface-2);
+  box-shadow: 0 0 0 1px var(--line);
+  transition: box-shadow 0.12s ease;
+}
+
+.tile-image img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tile-image img.tile-frame { object-fit: fill; }
+
+.tile-label {
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tile:active .tile-image { opacity: 0.8; }
+.tile.is-selected .tile-image { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--text); }
+.tile.is-selected .tile-label { color: var(--text); }
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto;
+  border: 3px solid rgba(255, 255, 255, 0.14);
+  border-top-color: var(--text);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* --- 4. Live screen -------------------------------------------------------- */
+.stage {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* The viewfinder is always the 9:8 photo shape, as big as fits. */
+.viewfinder {
+  --vf-h: min(calc(var(--screen-h) - 2 * var(--pad)),
+              calc((100vw - var(--rail-w) - 3 * var(--pad)) * 8 / 9));
+  position: relative;
+  height: var(--vf-h);
+  width: calc(var(--vf-h) * 9 / 8);
+  border-radius: 4px;
+  overflow: hidden;
+  background: #000;
+}
+
+.vf-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vf-frame { object-fit: fill; }       /* frames are stretched exactly like on the photo */
+.freeze { z-index: 2; animation: fade-in 0.15s ease-out; }
+
+/* The control rail on the right. */
+.panel,
+.review-side {
+  flex: none;
+  width: var(--rail-w);
+  display: flex;
+  flex-direction: column;
+  padding-left: var(--pad);
+  border-left: 1px solid var(--line);
+}
+
+.panel {
+  gap: 16px;
+  overflow: hidden;
+}
+
+/* Sections keep their natural height. Without this, when space runs short the
+   browser squashes them and they draw on top of each other. */
+.panel > *,
+.style-pickers > *,
+.review-actions > *,
+.review-editor > *,
+.editor-pane > * {
+  flex-shrink: 0;
+}
+
+.panel-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+/* The three photos so far, as tiny white-bordered prints. */
+.progress-slots {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+
+.slot {
+  width: 40px;
+  aspect-ratio: 9 / 8;
+  border-radius: 2px;
+  background: var(--surface-2) center / cover no-repeat;
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.slot.is-filled { box-shadow: 0 0 0 2px #fff; animation: fade-in 0.4s ease-out; }
+.slot.is-next { box-shadow: 0 0 0 2px var(--red); }
+
+/* Filter and frame choices; dimmed while the countdown runs. */
+.style-pickers {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: opacity 0.2s ease;
+}
+
+.panel.is-shooting .style-pickers {
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+.panel.is-shooting .take-area { visibility: hidden; }
+.panel:not(.is-shooting) .progress-slots { display: none; }   /* only while shooting */
+
+.logo {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 46px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.panel-sub {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Round shutter button: a red disc inside a white ring. */
+.shutter {
+  width: 124px;
+  height: 124px;
+  padding: 6px;
+  border: 4px solid var(--text);
+  border-radius: 50%;
+  background: transparent;
+}
+
+.shutter-core {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--red);
+  color: #fff;
+  font-family: var(--display);
+  font-size: 32px;
+  line-height: 0.95;
+  letter-spacing: 0.06em;
+  text-align: center;
+  padding-top: 3px;            /* Bebas sits a little high */
+  transition: transform 0.1s ease, background 0.1s ease;
+}
+
+.shutter:active .shutter-core { transform: scale(0.92); background: #b52a23; }
+.shutter:disabled { opacity: 0.35; }
+
+/* Start screen: the whole camera picture, edge to edge. */
+.screen-start {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  cursor: pointer;
+}
+
+.start-preview {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.start-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: max(32px, env(safe-area-inset-top)) max(40px, env(safe-area-inset-right))
+           max(36px, env(safe-area-inset-bottom)) max(40px, env(safe-area-inset-left));
+  background:
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.55), transparent 26%),
+    linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent 45%);
+}
+
+.start-title {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 64px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.start-kicker {
+  margin: 6px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.start-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.start-cta {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 56px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  animation: breathe 3s ease-in-out infinite;
+}
+
+.start-sub {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.6; }
+}
+
+/* Take photo: the shutter inside a ring that runs down over the time limit. */
+.take-area {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.take-button-wrap {
+  position: relative;
+  width: 124px;
+  height: 124px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.take-timer {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg);
+  pointer-events: none;        /* taps go through to the button underneath */
+}
+
+.take-timer circle { fill: none; stroke-width: 3; }
+.take-timer-track { stroke: rgba(255, 255, 255, 0.12); }
+
+.take-timer-fill {
+  stroke: var(--text);
+  stroke-linecap: round;
+  stroke-dasharray: 295.3;          /* circumference of r=47 */
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 0.25s linear, stroke 0.2s ease;
+}
+
+.take-timer-fill.is-ending { stroke: var(--red); }
+
+.take-btn {
+  position: relative;
+  z-index: 1;
+  width: 98px;
+  height: 98px;
+  padding: 4px 0 0;            /* Bebas sits a little high */
+  border: 0;
+  border-radius: 50%;
+  background: var(--red);
+  color: #fff;
+  font-family: var(--display);
+  font-size: 40px;
+  letter-spacing: 0.06em;
+  transition: transform 0.1s ease, background 0.1s ease;
+}
+
+.take-btn:active { transform: scale(0.94); background: #b52a23; }
+
+.take-sub {
+  margin: 0;
+  min-height: 20px;
+  font-size: 14px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.take-sub.is-ending { color: var(--text); }
+
+/* --- 5. Countdown, flash, developing ------------------------------------------ */
+.countdown {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+}
+
+.countdown span {
+  font-family: var(--display);
+  font-size: min(48vh, 360px);
+  line-height: 1;
+  padding-top: 0.06em;
+  color: #fff;
+  text-shadow: 0 4px 30px rgba(0, 0, 0, 0.45);
+}
+
+.countdown span.tick { animation: tick 1s ease-out; }
+
+@keyframes tick {
+  0%   { opacity: 0; transform: scale(1.08); }
+  12%  { opacity: 1; transform: scale(1); }
+  85%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.countdown-ring {
+  position: absolute;
+  width: min(62vh, 470px);
+  height: min(62vh, 470px);
+  transform: rotate(-90deg);
+}
+
+.countdown-ring circle {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.9);
+  stroke-width: 1.2;
+  stroke-dasharray: 276.5;          /* circumference of r=44 */
+  stroke-dashoffset: 0;
+}
+
+.countdown-ring.tick circle { animation: ring 1s linear; }
+
+@keyframes ring {
+  from { stroke-dashoffset: 0; }
+  to   { stroke-dashoffset: 276.5; }
+}
+
+.flash {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.flash.is-firing { animation: flash 0.6s ease-out; }
+
+@keyframes flash {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.developing {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  background: rgba(11, 11, 12, 0.85);
+}
+
+.developing-title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 56px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.developing-bar {
+  width: 220px;
+  height: 3px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.developing-bar i {
+  display: block;
+  width: 40%;
+  height: 100%;
+  background: var(--text);
+  animation: sweep 1.2s ease-in-out infinite;
+}
+
+@keyframes sweep {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(250%); }
+}
+
+/* --- 6. Review screen ------------------------------------------------------ */
+.review .strip-holder {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+}
+
+/* A dark "slot" the strip slides out of, like a real booth. */
+.strip-slot {
+  --strip-h: calc(var(--screen-h) - 2 * var(--pad) - 12px);
+  position: relative;
+  height: var(--strip-h);
+  /* inner area (height minus 12px top padding) is exactly 1:3, like the strip */
+  width: calc((var(--strip-h) - 12px) / 3 + 24px);
+  padding: 12px 12px 0;
+  overflow: hidden;
+}
+
+.strip-slot::before {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 12px;
+  border-radius: 3px;
+  background: #000;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.06), 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.strip-frame { position: relative; height: 100%; }
+.strip-frame.is-printing { animation: print-out 2.2s cubic-bezier(0.3, 0.7, 0.3, 1); }
+
+@keyframes print-out {
+  from { transform: translateY(-102%); }
+  to   { transform: translateY(0); }
+}
+
+#strip-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+}
+
+/* Invisible buttons over the three photos (positions match imaging.py:
+   photos are 540x480 at x=30, y=30/534/1038 on a 600x1800 strip). */
+.strip-hit {
+  position: absolute;
+  left: 5%;
+  width: 90%;
+  height: 26.667%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  transition: box-shadow 0.12s ease;
+}
+
+.strip-hit[data-photo="1"] { top: 1.667%; }
+.strip-hit[data-photo="2"] { top: 29.667%; }
+.strip-hit[data-photo="3"] { top: 57.667%; }
+.strip-hit:active { background: rgba(255, 255, 255, 0.12); }
+.strip-hit.is-selected { box-shadow: 0 0 0 3px #0b0b0c, 0 0 0 5px var(--text); }
+
+.strip-busy {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(11, 11, 12, 0.3);
+  animation: fade-in 0.2s ease-out;
+}
+
+.review-side { width: clamp(380px, 44vw, 540px); }
+
+.review-actions,
+.review-editor {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.review-head {
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.review-title {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 56px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.review-hint {
+  margin: 8px 0 0;
+  font-size: 16px;
+  color: var(--muted);
+}
+
+.action-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.action-tile {
+  min-height: 112px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 18px 20px;
+  border: 0;
+  border-radius: var(--radius);
+  font-size: 19px;
+  font-weight: 600;
+  text-align: left;
+  background: var(--surface-2);
+  transition: background 0.15s ease, opacity 0.2s ease;
+}
+
+.action-tile:active { background: var(--surface-3); }
+.action-tile:disabled { opacity: 0.4; pointer-events: none; }
+
+/* Who the photos were emailed to. */
+.email-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex-shrink: 1 !important;      /* a long list scrolls instead of pushing Finish off screen */
+  min-height: 0;
+  border-top: 1px solid var(--line);
+}
+
+.email-list:empty { border-top: 0; }
+
+.email-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 2px;
+  border-bottom: 1px solid var(--line);
+  font-size: 16px;
+}
+
+.email-list .to {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.email-list .state { color: var(--muted); font-size: 14px; white-space: nowrap; }
+.email-list .is-sent .state { color: var(--good); }
+.email-list .is-failed .state { color: var(--bad); }
+
+/* Status mark: a small, slow ring while on its way, a plain dot once settled. */
+.dot {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.is-pending .dot {
+  background: none;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-top-color: var(--text);
+  animation: spin 1.2s linear infinite;
+}
+
+.is-sent .dot { background: var(--good); }
+.is-failed .dot { background: var(--bad); }
+
+.btn-done { margin-top: auto; min-height: 72px; font-size: 20px; flex: none; }
+.done-timer { font-size: 16px; font-weight: 500; opacity: 0.6; }
+
+/* Thin line along the bottom of Finish, shrinking as the idle timer runs out. */
+.done-progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: 100%;
+  background: rgba(11, 11, 12, 0.35);
+  transform-origin: left;
+  transition: transform 0.25s linear;
+}
+
+/* Customize editor */
+.editor-pane {
+  flex: 1 1 auto !important;      /* the one part that may shrink (and scroll) */
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  overflow: hidden;
+  /* room for the selection outlines, which would otherwise be cut off */
+  padding: 6px;
+  margin: -6px;
+}
+
+/* The editor rail is wider, so its filters fit in two rows of six. */
+#edit-filter-grid,
+#edit-frame-row { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.editor-pane .tile-label { font-size: 12px; }
+.editor-pane .btn-small { align-self: flex-start; }
+
+.photo-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 124px));
+  gap: 12px;
+}
+
+.photo-tab {
+  position: relative;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  aspect-ratio: 9 / 8;
+  background: var(--surface-2);
+  opacity: 0.45;
+  transition: opacity 0.15s ease, box-shadow 0.15s ease;
+}
+
+.photo-tab img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.photo-tab span {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  min-width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.7);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.photo-tab.is-selected { opacity: 1; box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--text); }
+.photo-tab.is-selected span { background: var(--text); color: var(--bg); }
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px 10px;
+}
+
+.theme-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+}
+
+.theme-swatch {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 30px;
+  line-height: 1;
+  box-shadow: 0 0 0 1px var(--line);
+  transition: box-shadow 0.12s ease;
+}
+
+.theme-tile.is-selected .theme-swatch { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--text); }
+.theme-tile.is-selected .tile-label { color: var(--text); }
+
+.caption-form { display: flex; gap: 10px; }
+
+.caption-input,
+.email-input {
+  flex: 1;
+  min-width: 0;
+  height: 56px;
+  padding: 0 16px;
+  border: 1px solid var(--surface-3);
+  border-radius: var(--radius);
+  font: inherit;
+  font-size: 20px;
+  color: var(--text);
+  background: var(--surface);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.caption-input:focus,
+.email-input:focus { border-color: var(--text); }
+
+.review-editor > .btn-primary { flex: none; min-height: 68px; }
+
+/* --- 7. Email sheet, toast, notice, rotate hint ---------------------------- */
+.sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: flex-start;       /* keep clear of the on-screen keyboard */
+  justify-content: center;
+  padding-top: 6vh;
+  background: rgba(0, 0, 0, 0.7);
+  animation: fade-in 0.15s ease-out;
+}
+
+.sheet-card {
+  width: min(620px, 90vw);
+  padding: 32px 34px;
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--line), 0 24px 70px rgba(0, 0, 0, 0.6);
+}
+
+.sheet-card h2 {
+  margin: 0 0 6px;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.sheet-text {
+  margin: 0 0 22px;
+  font-size: 17px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.email-input { width: 100%; height: 68px; font-size: 24px; }
+
+.field-error {
+  min-height: 24px;
+  margin: 10px 0 8px;
+  font-size: 16px;
+  color: var(--bad);
+}
+
+.sheet-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.sheet-buttons .btn { min-width: 150px; }
+
+.sheet-middle { align-items: center; padding-top: 0; }
+.sheet-middle .sheet-card { width: min(520px, 90vw); text-align: center; }
+.sheet-buttons-stack { flex-direction: column; align-items: stretch; }
+.sheet-buttons-center { justify-content: center; }
+
+.email-status { text-align: center; }
+
+.status-icon {
+  width: 76px;
+  height: 76px;
+  margin: 4px auto 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 34px;
+  font-weight: 600;
+  box-shadow: inset 0 0 0 2px var(--line);
+}
+
+.status-icon.is-busy { box-shadow: none; }
+.status-icon.is-sent { box-shadow: inset 0 0 0 2px var(--good); color: var(--good); }
+.status-icon.is-failed { box-shadow: inset 0 0 0 2px var(--bad); color: var(--bad); }
+
+.toast {
+  position: fixed;
+  z-index: 60;
+  left: 50%;
+  top: max(20px, env(safe-area-inset-top));
+  max-width: 80vw;
+  padding: 14px 22px;
+  border-radius: 8px;
+  background: var(--text);
+  color: #0b0b0c;
+  font-size: 17px;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+  transform: translateX(-50%);
+  animation: toast-in 0.2s ease-out;
+}
+
+@keyframes toast-in {
+  from { transform: translate(-50%, -12px); opacity: 0; }
+  to   { transform: translate(-50%, 0); opacity: 1; }
+}
+
+.notice {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background: rgba(0, 0, 0, 0.82);
+}
+
+.notice-card {
+  max-width: 540px;
+  padding: 36px 40px;
+  border-radius: 14px;
+  background: var(--surface);
+  text-align: center;
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.notice-card h2 { margin: 0 0 10px; font-size: 26px; font-weight: 700; }
+.notice-card p { margin: 0; font-size: 17px; line-height: 1.45; color: var(--muted); }
+.notice-card .spinner { margin-bottom: 22px; }
+
+.rotate-hint { display: none; }
+
+@media (orientation: portrait) {
+  .rotate-hint {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    font-family: var(--display);
+    font-size: 44px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+}

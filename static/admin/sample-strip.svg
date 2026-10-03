@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="1800" viewBox="0 0 600 1800">
+  <!-- Stand-in strip for the email preview, used until the first real strip is taken. -->
+  <rect width="600" height="1800" fill="#ffffff"/>
+  <rect x="30" y="30" width="540" height="480" fill="#ffd5dd"/>
+  <rect x="30" y="534" width="540" height="480" fill="#d9ecff"/>
+  <rect x="30" y="1038" width="540" height="480" fill="#fff0c7"/>
+  <text x="300" y="1640" font-family="Georgia, serif" font-size="64" text-anchor="middle" fill="#1d1d1f">Photo Booth</text>
+  <text x="300" y="1720" font-family="Helvetica, Arial, sans-serif" font-size="28" letter-spacing="3" text-anchor="middle" fill="#ff4f6d">YOUR STRIP HERE</text>
+</svg>
